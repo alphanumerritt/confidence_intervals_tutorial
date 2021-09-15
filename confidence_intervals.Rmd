@@ -1,0 +1,98 @@
+---
+title: "Confidence Interval Tutorial"
+output: html_notebook
+---
+
+Let's make some confidence interval plots!
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(scales)
+```
+
+## The basic plot is just a few lines of code
+
+```{r conf_intervals_means}
+    
+sims <- 10000 # how many simulations of conversion rate for chart
+
+
+# conversion rate data
+cvr_a <- .02
+cvr_b <- cvr_a * 1.05
+
+
+# standard errors -- remember, sample size is implicit in SE
+se_a <- .0002
+se_b <- .0002
+
+
+# create data frame of simulated conversion rates based on observed CVRs and standard errors
+df <- data.frame(variant = factor(c(rep("A", sims), rep("B", sims))),
+                 CVR = c(
+                   rnorm(n = sims,mean = cvr_a,sd = se_a),
+                   rnorm(n = sims,mean = cvr_b,sd = se_b)
+                 ))
+
+
+# build the plot
+ci_plot <- ggplot(df, aes(x = CVR, fill = variant)) +
+  geom_density(alpha = .5, bw = "SJ", adjust = 3) 
+
+ci_plot
+```
+
+## Add some formatting
+
+```{r}
+
+ci_plot <- ci_plot +
+  scale_y_continuous(expand = expansion(mult = c(0, .1))) + # spacing around axes
+  scale_x_continuous(labels = scales::percent) +
+  theme_light() + # plot theme
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_blank(),
+    legend.position = "none",
+    axis.ticks.y = element_blank()
+  ) # gets rid of unnecessary elements
+
+ci_plot
+
+```
+
+## Add some annotations maybe
+
+```{r}
+
+ci_plot <- ci_plot +
+  geom_vline( # adds mean lines
+    xintercept = c(cvr_a, cvr_b),
+    linetype = "dashed",
+    size = .25,
+  ) +
+  annotate( # adds variant labels
+    geom = "text",
+    x = c(cvr_a, cvr_b),
+    y = 2000,
+    hjust = "center",
+    label = c("Control", "Test"),
+    fontface = "bold",
+    size = 4.0
+  ) +
+  annotate( # adds interval lines
+    geom = "pointrange",
+    x = c(cvr_a, cvr_b),
+    y = c(500, 750),
+    xmin = c(cvr_a - (se_a * 1.96), cvr_b - (se_b * 1.96)),
+    xmax = c(cvr_a + (se_a * 1.96), cvr_b + (se_b * 1.96)),
+    size = .75,
+    shape = 18
+  ) 
+
+ci_plot
+
+```
